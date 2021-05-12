@@ -3,14 +3,19 @@ import urllib.parse as p
 import requests
 
 def trim(path):
-    path_que = p.urlparse(path).query
-    q_par = p.parse_qs(path_que)
-    URL_and_par = q_par['URL'][0]
-    par = p.urlparse(URL_and_par).query
-    URL = URL_and_par.replace('?' + par, '')
-    par = p.parse_qs(par)
-    par = par['param'][0]
-    return par, URL
+    url_n_par = p.urlparse(path).query
+
+    pre_text = path.replace('/?URL=', '')
+    par_pre = p.urlparse(pre_text).query
+    par = p.parse_qs(par_pre)
+    params = {k: par[k][0] for k in par}
+    
+    URL_pre = path.replace('/?' + par_pre, '')
+    URL_pre = p.urlparse(URL_pre).query
+    URL_pre_d = p.parse_qs(URL_pre)
+    URL = URL_pre_d['URL'][0]
+
+    return params, URL
 
 class Server(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -21,8 +26,7 @@ class Server(BaseHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', '*')#これがないとリクエストに答えられない。js側エラー内容( No 'Access-Control-Allow-Origin' header is present on the requested resource.)
             self.end_headers()
             
-            par, URL = trim(self.path)
-            paramater = par
+            params, URL = trim(self.path)
             result = None#念のため一度Noneで初期化
             
             res = requests.get(URL)#URLにGETする
@@ -33,7 +37,7 @@ class Server(BaseHTTPRequestHandler):
             print()
             d = {}
             exec(func_text)#Gistのプログラムを実行、第3引数locals()でもdict型の変数でも大丈夫
-            result = locals()['func'](paramater)
+            result = locals()['func'](params)
             # result = d['func'](paramater)#第3引数dict型変数の場合、()がとれて少しだけわかりやすい
             print(result)
             print()
